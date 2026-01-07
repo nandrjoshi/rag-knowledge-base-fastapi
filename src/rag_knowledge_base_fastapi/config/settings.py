@@ -9,8 +9,8 @@ class Settings(BaseSettings):
     """
 
     # ---OpenAI ---
-    openai_api_key: str = Field(default="", alias="OPEN_API_KEY")
-    openai_chat_model: str = Field(default="gpt-4o-mini", alias="OPRN_CHAT_MODEL")
+    openai_api_key: str = Field(default="", alias="OPENAI_API_KEY")
+    openai_chat_model: str = Field(default="gpt-4o-mini", alias="OPRNAI_CHAT_MODEL")
     openai_embed_model: str = Field(default="text-embedding-3-small", alias="OPENAI_EMBED_MODEL")
 
     # --- Database ---
@@ -31,4 +31,4 @@ class Settings(BaseSettings):
     )
 
 
-settings = Settings()
+settings: Settings = Settings()
