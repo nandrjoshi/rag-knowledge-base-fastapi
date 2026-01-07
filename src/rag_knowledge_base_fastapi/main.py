@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from rag_knowledge_base_fastapi.config.settings import settings
-
+from rag_knowledge_base_fastapi.services.db import create_db_engine, check_db_health
 
 app = FastAPI(title ="RAG Knowledge Base (FastAPI)", version="0.1.0")
 
@@ -18,4 +18,14 @@ def config() -> dict:
         "chunk_size_chars": settings.chunk_size_chars,
         "chunk_overlap_chars": settings.chunk_overlap_chars,
         "openai_api_key_configured": bool(settings.openai_api_key),
+    }
+
+@app.get("/db/health")
+def db_health() -> dict:
+    engine = create_db_engine()
+    result = check_db_health(engine)
+    return {
+        "ok": result.ok,
+        "server_version": result.server_version,
+        "error": result.error,
     }
