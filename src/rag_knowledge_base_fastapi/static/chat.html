@@ -1,127 +1,298 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>RAG Knowledge Base Chat</title>
-    <style>
-      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 0; background: #0b0f17; color: #e8eefc; }
-      .wrap { max-width: 900px; margin: 0 auto; padding: 24px; }
-      .card { background: #121a2a; border: 1px solid #23304a; border-radius: 12px; padding: 16px; }
-      h1 { font-size: 20px; margin: 0 0 12px; }
-      .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
-      input[type="text"] { flex: 1; min-width: 260px; padding: 10px 12px; border-radius: 10px; border: 1px solid #2a3a5a; background: #0f1626; color: #e8eefc; }
-      input[type="number"] { width: 90px; padding: 10px 12px; border-radius: 10px; border: 1px solid #2a3a5a; background: #0f1626; color: #e8eefc; }
-      button { padding: 10px 14px; border-radius: 10px; border: 1px solid #2a3a5a; background: #1f2c45; color: #e8eefc; cursor: pointer; }
-      button:disabled { opacity: 0.6; cursor: not-allowed; }
-      .small { font-size: 12px; color: #b7c4df; }
-      .log { margin-top: 14px; display: grid; gap: 12px; }
-      .msg { padding: 12px; border-radius: 12px; border: 1px solid #23304a; background: #0f1626; }
-      .msg .meta { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
-      .pill { font-size: 12px; padding: 2px 8px; border: 1px solid #2a3a5a; border-radius: 999px; color: #b7c4df; }
-      .answer { white-space: pre-wrap; line-height: 1.4; }
-      .citations { margin-top: 10px; display: grid; gap: 6px; }
-      .cite { font-size: 12px; color: #b7c4df; }
-      a { color: #9dc1ff; text-decoration: none; }
-      a:hover { text-decoration: underline; }
-    </style>
-  </head>
-  <body>
-    <div class="wrap">
-      <div class="card">
-        <h1>RAG Knowledge Base Chat</h1>
-        <div class="row">
-          <input id="message" type="text" placeholder="Ask a question..." />
-          <label class="small">top_k</label>
-          <input id="topk" type="number" min="1" max="20" value="5" />
-          <button id="send">Send</button>
-        </div>
-        <div class="small" style="margin-top:10px;">
-          This UI calls <code>/chat</code> and shows returned citations.
-        </div>
-      </div>
 
-      <div id="log" class="log"></div>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>RAG Knowledge Base Chat</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      margin: 0;
+      background: #0b0f17;
+      color: #e8eefc;
+    }
+
+    .wrap {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    .card {
+      background: #121a2a;
+      border: 1px solid #23304a;
+      border-radius: 12px;
+      padding: 16px;
+    }
+
+    h1 {
+      font-size: 20px;
+      margin: 0 0 12px;
+    }
+
+    .row {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      min-width: 260px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid #2a3a5a;
+      background: #0f1626;
+      color: #e8eefc;
+    }
+
+    input[type="number"] {
+      width: 90px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid #2a3a5a;
+      background: #0f1626;
+      color: #e8eefc;
+    }
+
+    select {
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid #2a3a5a;
+      background: #0f1626;
+      color: #e8eefc;
+    }
+
+    button {
+      padding: 10px 14px;
+      border-radius: 10px;
+      border: 1px solid #2a3a5a;
+      background: #1f2c45;
+      color: #e8eefc;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .small {
+      font-size: 12px;
+      color: #b7c4df;
+    }
+
+    .log {
+      margin-top: 14px;
+      display: grid;
+      gap: 12px;
+    }
+
+    .msg {
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px solid #23304a;
+      background: #0f1626;
+    }
+
+    .msg .meta {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+
+    .pill {
+      font-size: 12px;
+      padding: 2px 8px;
+      border: 1px solid #2a3a5a;
+      border-radius: 999px;
+      color: #b7c4df;
+    }
+
+    .answer {
+      white-space: pre-wrap;
+      line-height: 1.4;
+    }
+
+    .citations {
+      margin-top: 10px;
+      display: grid;
+      gap: 6px;
+    }
+
+    .cite {
+      font-size: 12px;
+      color: #b7c4df;
+    }
+
+    a {
+      color: #9dc1ff;
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>RAG Knowledge Base Chat</h1>
+      <div class="row">
+        <input id="message" type="text" placeholder="Ask a question..." />
+        <label class="small">top_k</label>
+        <input id="topk" type="number" min="1" max="20" value="5" />
+
+        <label class="small">KB</label>
+        <select id="kbSelect">
+          <option value="">Loading…</option>
+        </select>
+
+        <button id="send">Send</button>
+      </div>
+      <div class="small" style="margin-top:10px;">
+        This UI calls <code>/chat</code> and shows returned citations.
+      </div>
     </div>
 
-    <script>
-      const $msg = document.getElementById("message");
-      const $topk = document.getElementById("topk");
-      const $send = document.getElementById("send");
-      const $log = document.getElementById("log");
+    <div id="log" class="log"></div>
+  </div>
 
-      function escapeHtml(s) {
-        return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  <script>
+    const $msg = document.getElementById("message");
+    const $topk = document.getElementById("topk");
+    const $send = document.getElementById("send");
+    const $log = document.getElementById("log");
+    const $kbSelect = document.getElementById("kbSelect");
+
+    function escapeHtml(s) {
+      return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+
+    function addBlock(title, content, citations) {
+      const wrap = document.createElement("div");
+      wrap.className = "msg";
+
+      const meta = document.createElement("div");
+      meta.className = "meta";
+      meta.innerHTML = `<span class="pill">${escapeHtml(title)}</span><span class="pill">${new Date().toLocaleTimeString()}</span>`;
+      wrap.appendChild(meta);
+
+      const ans = document.createElement("div");
+      ans.className = "answer";
+      ans.innerHTML = escapeHtml(content);
+      wrap.appendChild(ans);
+
+      if (citations && citations.length) {
+        const cites = document.createElement("div");
+        cites.className = "citations";
+        citations.forEach((c, i) => {
+          const div = document.createElement("div");
+          div.className = "cite";
+          div.textContent = `[${i + 1}] source=${c.source} doc_id=${c.doc_id ?? "null"} chunk=${c.chunk_index} score=${c.score}`;
+          cites.appendChild(div);
+        });
+        wrap.appendChild(cites);
       }
 
-      function addBlock(title, content, citations) {
-        const wrap = document.createElement("div");
-        wrap.className = "msg";
+      $log.prepend(wrap);
+    }
 
-        const meta = document.createElement("div");
-        meta.className = "meta";
-        meta.innerHTML = `<span class="pill">${escapeHtml(title)}</span><span class="pill">${new Date().toLocaleTimeString()}</span>`;
-        wrap.appendChild(meta);
+    async function loadKbDocs() {
+      try {
+        const res = await fetch("/kb/docs");
+        if (!res.ok) throw new Error(`Failed to load /kb/docs: HTTP ${res.status}`);
+        const docs = await res.json();
 
-        const ans = document.createElement("div");
-        ans.className = "answer";
-        ans.innerHTML = escapeHtml(content);
-        wrap.appendChild(ans);
+        $kbSelect.innerHTML = "";
 
-        if (citations && citations.length) {
-          const cites = document.createElement("div");
-          cites.className = "citations";
-          citations.forEach((c, i) => {
-            const div = document.createElement("div");
-            div.className = "cite";
-            div.textContent = `[${i + 1}] source=${c.source} doc_id=${c.doc_id ?? "null"} chunk=${c.chunk_index} score=${c.score}`;
-            cites.appendChild(div);
-          });
-          wrap.appendChild(cites);
+        // Prefer your main upload doc, then any upload doc that isn't "string"
+        const preferred =
+          docs.find(d => d.source === "upload" && d.doc_id === "project_overview") ||
+          docs.find(d => d.source === "upload" && d.doc_id !== "string") ||
+          docs[0];
+
+        for (const d of docs) {
+          const opt = document.createElement("option");
+          opt.value = `${d.source}::${d.doc_id}`;
+          opt.textContent = `${d.source} / ${d.doc_id} (${d.chunks})`;
+          $kbSelect.appendChild(opt);
         }
 
-        $log.prepend(wrap);
-      }
-
-      async function send() {
-        const message = ($msg.value || "").trim();
-        const top_k = parseInt($topk.value || "5", 10);
-
-        if (!message) return;
-
-        $send.disabled = true;
-        addBlock("User", message);
-
-        try {
-          const resp = await fetch("/chat", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ message, top_k })
-          });
-
-          if (!resp.ok) {
-            const text = await resp.text();
-            addBlock("Error", `HTTP ${resp.status}: ${text}`);
-            return;
-          }
-
-          const data = await resp.json();
-          addBlock("Assistant", data.answer || "(empty)", data.citations || []);
-          $msg.value = "";
-          $msg.focus();
-        } catch (e) {
-          addBlock("Error", String(e));
-        } finally {
-          $send.disabled = false;
+        if (preferred) {
+          $kbSelect.value = `${preferred.source}::${preferred.doc_id}`;
+        } else {
+          // Keep a safe default
+          const opt = document.createElement("option");
+          opt.value = "";
+          opt.textContent = "No documents found";
+          $kbSelect.appendChild(opt);
         }
+      } catch (e) {
+        // If docs endpoint fails, still allow chat without filters
+        $kbSelect.innerHTML = `<option value="">(KB list load failed)</option>`;
+        console.error(e);
       }
+    }
 
-      $send.addEventListener("click", send);
-      $msg.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") send();
-      });
+    async function send() {
+      const message = ($msg.value || "").trim();
+      const top_k = parseInt($topk.value || "5", 10);
 
-      $msg.focus();
-    </script>
-  </body>
+      if (!message) return;
+
+      $send.disabled = true;
+      addBlock("User", message);
+
+      // Parse selected KB filter
+      const raw = ($kbSelect.value || "").trim();
+      const parts = raw ? raw.split("::") : [];
+      const source = parts.length >= 1 ? parts[0] : undefined;
+      const doc_id = parts.length >= 2 ? parts[1] : undefined;
+
+      const payload = { message, top_k };
+      if (source) payload.source = source;
+      if (doc_id) payload.doc_id = doc_id;
+
+      try {
+        const resp = await fetch("/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+
+        if (!resp.ok) {
+          const text = await resp.text();
+          addBlock("Error", `HTTP ${resp.status}: ${text}`);
+          return;
+        }
+
+        const data = await resp.json();
+        addBlock("Assistant", data.answer || "(empty)", data.citations || []);
+        $msg.value = "";
+        $msg.focus();
+      } catch (e) {
+        addBlock("Error", String(e));
+      } finally {
+        $send.disabled = false;
+      }
+    }
+
+    // Wire events
+    $send.addEventListener("click", send);
+    $msg.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") send();
+    });
+
+    // Init
+    window.addEventListener("load", loadKbDocs);
+    $msg.focus();
+  </script>
+</body>
+
 </html>

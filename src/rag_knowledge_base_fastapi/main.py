@@ -10,10 +10,17 @@ from rag_knowledge_base_fastapi.services.retrieval import search_chunks
 
 from rag_knowledge_base_fastapi.models.chat import ChatRequest, ChatResponse, Citation
 from rag_knowledge_base_fastapi.services.chat_service import answer_with_rag
+from fastapi import UploadFile, File, Form, HTTPException
+
+from sqlalchemy import text
+from rag_knowledge_base_fastapi.services.db import create_db_engine
+
+
 
 from pathlib import Path
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
+
 
 
 
@@ -117,3 +124,58 @@ def chat(req: ChatRequest) -> ChatResponse:
 def home() -> HTMLResponse:
     html = (STATIC_DIR / "chat.html").read_text(encoding="utf-8")
     return HTMLResponse(content=html)
+
+@app.post("/ingest/file")
+async def ingest_file(
+    file: UploadFile = File(...),
+    source: str = Form("upload"),
+    doc_id: str | None = Form(None),
+) -> dict:
+    filename = file.filename or "upload.txt"
+
+    if not filename.lower().endswith(".txt"):
+        raise HTTPException(status_code=400, detail="Only .txt files are supported.")
+
+    raw = await file.read()
+
+    try:
+        content = raw.decode("utf-8")
+    except UnicodeDecodeError:
+        raise HTTPException(status_code=400, detail="File must be UTF-8 encoded text.")
+
+    if not content.strip():
+        raise HTTPException(status_code=400, detail="Uploaded file is empty.")
+
+    chunks = chunk_text(
+        content,
+        chunk_size=settings.chunk_size_chars,
+        chunk_overlap=settings.chunk_overlap_chars,
+    )
+
+    result = insert_chunks_with_embeddings(
+        source=source,
+        doc_id=doc_id or filename,
+        chunks=[(c.chunk_index, c.content) for c in chunks],
+        metadata={"ingest_type": "file", "filename": filename},
+    )
+
+    return {
+        "source": source,
+        "doc_id": doc_id or filename,
+        "filename": filename,
+        "chunks_created": len(chunks),
+        "chunks_inserted": result.inserted,
+    }
+
+@app.get("/kb/docs")
+def list_docs() -> list[dict]:
+    e = create_db_engine()
+    with e.connect() as c:
+        rows = c.execute(text("""
+            select source, doc_id, count(*) as chunks
+            from kb_chunks
+            group by source, doc_id
+            order by max(id) desc
+        """)).fetchall()
+
+    return [{"source": r[0], "doc_id": r[1], "chunks": r[2]} for r in rows]
